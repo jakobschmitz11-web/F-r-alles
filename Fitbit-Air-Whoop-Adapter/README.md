@@ -14,7 +14,7 @@ Originals gelten weiter, bitte dort nachlesen.
 ## Was geändert wurde (V22)
 
 - **Tasche 1 mm höher:** Der Fitbit sitzt 1 mm weiter oben und steht unten 1 mm weniger heraus. Dafür ist der
-  Rahmen um die Tasche 1 mm höher (Bauhöhe dort 4,9 statt 3,9 mm). Die Unterseite bleibt unverändert.
+  Rahmen um die Tasche 1 mm höher (Bauhöhe dort 4,8 statt 3,8 mm). Die Unterseite bleibt unverändert.
 - **Tasche 1,5 mm nach links verschoben**, Richtung Whoop-Schiene. Größe und Form der Tasche sind gleich geblieben
   (gemessen: Abweichung unter 0,05 mm²).
 - **Runde Spitze rechts gekürzt:** Gesamtlänge 38,1 statt 39,9 mm. Die Wand zwischen Tasche und Außenkante ist
@@ -30,6 +30,6 @@ Originals gelten weiter, bitte dort nachlesen.
 - Die Tasche kann nicht weiter nach links, ohne die Schiene zu verändern. Die Rundung am Ende lässt sich deshalb
   nicht ganz entfernen, die Tasche ragt rechts über die Stiftlöcher hinaus.
 - Durch die Verschiebung schneidet die Tasche links oben leicht in die Schiene (am Rand der Oberseite
-  höchstens etwa 0,5 mm tief). Die obere Haltelippe links ist dadurch weg. Der Fitbit wird links nur noch von
+  weniger als 1 mm tief). Die obere Haltelippe links ist dadurch weg. Der Fitbit wird links nur noch von
   der Tasche und der unteren Lippe gehalten. Wenn er dort zu locker sitzt, nimm die Version `nur_hoeher`.
 - Beides ist nur am Modell geprüft, nicht gedruckt.
