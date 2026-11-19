@@ -27,25 +27,24 @@ Technogym  ──► Export-Inbox/manuell ┼──► Obsidian-Vault/Fitness/*.
 
 ## Fitbit Air einrichten (Google Health API)
 
-Wichtig: Die **Fitbit Web API wurde am 30.10.2026 abgeschaltet** und Google Fit ist eingestellt. Fitbit-Daten gibt es nur noch über die **Google Health API**.
+Die **Fitbit Web API ist abgeschaltet** (laut Google-Doku: Support-Ende 30.09.2026, Abschaltung 02.11.2026) und Google Fit ist eingestellt. Fitbit-Daten – auch vom Fitbit Air – gibt es nur noch über die **Google Health API** (`health.googleapis.com/v4`).
 
-1. Google Cloud Console → Projekt anlegen → *Google Health API* aktivieren.
-2. OAuth-Zustimmungsbildschirm (extern, Status „Testing", dich als **Testnutzer** eintragen – so brauchst du kein Verifizierungsverfahren für den Eigengebrauch).
+1. Google Cloud Console → Projekt → *Google Health API* aktivieren.
+2. OAuth-Zustimmungsbildschirm (extern, Status „Testing", dich als **Testnutzer** eintragen).
 3. OAuth-Client „Webanwendung", Redirect-URI: `http://localhost:8787/auth/google/callback`.
-4. `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `.env`, neu starten, im Dashboard „Mit Google verbinden".
+4. `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in `.env`, neu starten, im Dashboard „Mit Google verbinden" (Google-Konto muss mit dem Fitbit-/Google-Health-Konto verknüpft sein).
 
-> ⚠️ **Nicht gegen die echte API getestet.** Die Entwicklungsumgebung hatte keinen Zugriff auf Googles Doku/API. Endpunkt-Pfade, Datentyp-Namen und Scopes sind Annahmen (siehe `connectors/googlehealth.js`, alle per Env überschreibbar: `GOOGLE_HEALTH_BASE`, `GOOGLE_HEALTH_SCOPES`, `GH_TYPE_STEPS` …). Bei HTTP-Fehlern erscheint die Meldung im Dashboard und die Roh-Antwort in `data/debug/<typ>.txt` – damit lässt sich der Connector in Minuten anpassen. Die Auswertung der Antworten ist per Unit-Test nur gegen eine *angenommene* Form geprüft.
+Der Connector wurde **anhand der offiziellen Doku** gebaut (Endpunkte, Filter-Syntax, `dailyRollUp`-Body, Datentyp-Namen, Scopes, Antwortformen) und gegen einen Mock-Server getestet, der genau dieses Protokoll erzwingt. Geholt werden: Schritte, Distanz, Kalorien, Aktivminuten (Tages-Rollups), Ruhepuls, HRV, Gewicht, Schlaf inkl. Phasen und Workouts. Gegen dein echtes Konto lief er mangels Zugangsdaten noch nicht – bei Fehlern erscheint die Meldung im Dashboard, die Roh-Antwort liegt in `data/debug/`.
 
 ## Technogym
 
-Technogym/mywellness hat **keine öffentliche API für Privatkunden** (nur Enterprise/Partner-API für Studios, bzw. Aggregatoren wie Terra). Deshalb:
-
+* **Offizielle Enterprise-API** (`connectors/technogym.js`, laut openplatformdocs.mywellness.com): trage `TECHNOGYM_API_KEY`, `TECHNOGYM_AUTH_DOMAIN` und `TECHNOGYM_USER_ID` in `.env` ein → Workouts (Dauer, kcal, Distanz, Geräte, MOVEs) werden automatisch abgeholt. **Diese Zugangsdaten vergibt Technogym nur an Partner** (Studios/Firmen). Hast du keine, nimm einen der beiden Wege unten.
 * **Inbox:** Exporte (`.tcx`, `.json`, `.csv`, auch deutsche Spaltennamen) in `Fitness/Inbox/` legen → automatisch importiert und nach `Verarbeitet/` verschoben.
 * **Manuell:** Formular im Dashboard („Workout manuell eintragen").
-* Läuft dein Technogym-Training über die Fitbit/Google-Health-Daten mit (Bluetooth/Health-Sync), erscheint es zusätzlich als Quelle `fitbit`.
+* Läuft dein Training über Fitbit/Health-Sync mit, erscheint es zusätzlich als Quelle `fitbit`.
 
 ## Tests
 
 ```bash
-npm test     # 9 Tests: Vault-Roundtrip, Importer, Inbox, Server, Live-Events, Pfad-Sicherheit
+npm test     # 12 Tests: Vault, Importer, Server/Live-Events, Google-Health- und Technogym-Connector gegen protokollstrenge Mocks
 ```

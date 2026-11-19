@@ -6,12 +6,14 @@ import { Vault } from './lib/vault.js';
 import { writeDemo } from './lib/demo.js';
 import { processInbox } from './lib/importers.js';
 import { GoogleHealth } from './connectors/googlehealth.js';
+import { Technogym } from './connectors/technogym.js';
 
 export function createApp(cfg = getConfig()) {
   const vault = new Vault(cfg.fitnessDir);
   vault.init();
   fs.mkdirSync(cfg.inbox, { recursive: true });
   const google = new GoogleHealth(cfg);
+  const technogym = new Technogym(cfg);
   const clients = new Set();
   const state = { lastInbox: null, syncing: false, startedAt: new Date().toISOString() };
 
@@ -22,7 +24,8 @@ export function createApp(cfg = getConfig()) {
       days, workouts, now: new Date().toISOString(),
       status: {
         vault: cfg.vault, hasDemo: sources.has('demo'), sources: [...sources],
-        google: { configured: google.configured, ...google.status }, inbox: { path: cfg.inbox, last: state.lastInbox },
+        google: { configured: google.configured, ...google.status },
+        technogym: { configured: technogym.configured, ...technogym.status }, inbox: { path: cfg.inbox, last: state.lastInbox },
         syncing: state.syncing, syncMinutes: cfg.syncMinutes,
       },
     };
@@ -51,11 +54,12 @@ export function createApp(cfg = getConfig()) {
     try {
       const inbox = scanInbox();
       const g = await google.sync(vault, 7).catch((e) => { google.status.lastError = e.message; return null; });
-      return { inbox, google: g };
+      const t = await technogym.sync(vault).catch((e) => { technogym.status.lastError = e.message; return null; });
+      return { inbox, google: g, technogym: t };
     } finally { state.syncing = false; broadcast('update'); }
   }
 
-  if (cfg.demo && vault.readAll().days.length === 0 && !google.status.connected) writeDemo(vault);
+  if (cfg.demo && vault.readAll().days.length === 0 && !google.status.connected && !technogym.configured) writeDemo(vault);
   const interval = setInterval(syncAll, cfg.syncMinutes * 60_000); interval.unref();
   setTimeout(syncAll, 1500).unref();
 
@@ -125,7 +129,7 @@ export function createApp(cfg = getConfig()) {
   });
 
   return {
-    server, vault, google, snapshot, syncAll, scanInbox,
+    server, vault, google, technogym, snapshot, syncAll, scanInbox,
     close() { clearInterval(interval); watchers.forEach((w) => w.close()); for (const c of clients) c.end(); server.close(); },
   };
 }

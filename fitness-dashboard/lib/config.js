@@ -31,5 +31,11 @@ export function getConfig(env = process.env) {
       clientId: env.GOOGLE_CLIENT_ID || '',
       clientSecret: env.GOOGLE_CLIENT_SECRET || '',
     },
+    technogym: {
+      apiKey: env.TECHNOGYM_API_KEY || '',
+      authDomain: env.TECHNOGYM_AUTH_DOMAIN || '',
+      userId: env.TECHNOGYM_USER_ID || '',
+      baseUrl: (env.TECHNOGYM_BASE_URL || 'https://enterprise.mywellness.com/api').replace(/\/$/, ''),
+    },
   };
 }

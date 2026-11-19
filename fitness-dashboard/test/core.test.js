@@ -6,7 +6,7 @@ import path from 'node:path';
 import { Vault, parseNote, stringifyFrontmatter } from '../lib/vault.js';
 import { parseTcx, parseCsv, parseJson, processInbox } from '../lib/importers.js';
 import { writeDemo } from '../lib/demo.js';
-import { summarize } from '../connectors/googlehealth.js';
+import { parseList, parseRollup, ROLLUPS } from '../connectors/googlehealth.js';
 import http from 'node:http';
 import { createApp } from '../server.js';
 
@@ -72,19 +72,9 @@ test('Demo-Daten schreiben & löschen', () => {
   assert.equal(v.readAll().days.length, 0);
 });
 
-test('Google-Health-Auswertung (angenommene Antwortform)', () => {
-  const s = summarize('steps', [
-    { steps: { count: '4000', interval: { startTime: '2026-11-10T08:00:00Z' } } },
-    { steps: { count: 2500, interval: { startTime: '2026-11-10T12:00:00Z' } } },
-  ]);
-  assert.equal(Object.values(s.days)[0].steps, 6500);
-  const ex = summarize('exercise', [{ exercise: { exerciseType: 'RUNNING', interval: { startTime: '2026-11-10T07:00:00Z', endTime: '2026-11-10T07:45:00Z' } } }]);
-  assert.equal(ex.workouts[0].duration_min, 45);
-});
-
 test('Server: API, Host-Schutz, manuelles Workout, Live-Event', async () => {
   const root = tmp();
-  const cfg = { port: 0, syncMinutes: 999, demo: true, vault: root, fitnessDir: path.join(root, 'Fitness'), inbox: path.join(root, 'Fitness', 'Inbox'), dataDir: path.join(root, 'data'), google: { clientId: '', clientSecret: '' } };
+  const cfg = { port: 0, syncMinutes: 999, demo: true, vault: root, fitnessDir: path.join(root, 'Fitness'), inbox: path.join(root, 'Fitness', 'Inbox'), dataDir: path.join(root, 'data'), google: { clientId: '', clientSecret: '' }, technogym: { apiKey: '', authDomain: '', userId: '', baseUrl: '' } };
   const app = createApp(cfg);
   await new Promise((r) => app.server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${app.server.address().port}`;
