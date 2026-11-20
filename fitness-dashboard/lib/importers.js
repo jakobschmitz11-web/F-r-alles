@@ -4,6 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { isoDate } from './demo.js';
+import { parseSession } from '../connectors/technogym.js';
 
 const num = (v) => {
   const n = typeof v === 'string' ? parseFloat(v.replace(',', '.')) : Number(v);
@@ -88,10 +89,18 @@ export function parseCsv(text) {
   }).filter(Boolean);
 }
 
+// Technogym/mywellness-JSON (z.B. Export der Trainingsliste/-details): Einträge mit startedOn, duration in SEKUNDEN
+const isTechnogymShape = (o) => o && typeof o === 'object' && typeof o.startedOn === 'string';
+
 export function parseJson(text) {
-  const data = JSON.parse(text);
-  const arr = Array.isArray(data) ? data : (data.workouts || data.activities || data.items || data.data || []);
-  return arr.map(normalizeRow).filter(Boolean);
+  let data = JSON.parse(text);
+  // Antwort-Hüllen entpacken: {data:[...]}, {workouts:[...]}, {result:{...}} …
+  for (let i = 0; i < 3 && data && !Array.isArray(data) && !isTechnogymShape(data); i++) {
+    const inner = data.workouts ?? data.activities ?? data.sessions ?? data.items ?? data.data ?? data.result ?? data.results;
+    if (inner === undefined) break; data = inner;
+  }
+  const arr = Array.isArray(data) ? data : [data];
+  return arr.map((o) => (isTechnogymShape(o) ? parseSession(o, Array.isArray(o.exercises) ? o : null) : normalizeRow(o))).filter(Boolean);
 }
 
 export function parseFile(name, text) {

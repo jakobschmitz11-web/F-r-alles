@@ -151,3 +151,15 @@ test('Technogym Enterprise-API: Header, Liste + Detail -> Workout-Notiz', async 
   assert.equal(parseSession({ id: '9', startedOn: '2025-06-05T12:00:00Z', duration: 600 }, null).type, 'Training');
   s.close();
 });
+
+test('Technogym-JSON-Export (startedOn/Sekunden) wird im Inbox-Import erkannt', async () => {
+  const { parseJson, processInbox } = await import('../lib/importers.js');
+  const list = [{ id: '5', title: 'Workout 1', startedOn: '2026-11-10T17:25:50.612+00:00', partitionDate: 20261110, calories: 300, move: 400, duration: 2400 }];
+  const [a] = parseJson(JSON.stringify({ data: list }));
+  assert.equal(a.source, 'technogym'); assert.equal(a.duration_min, 40); assert.equal(a.calories, 300); assert.equal(a.date, '2026-11-10');
+  const [b] = parseJson(JSON.stringify({ id: '6', startedOn: '2026-11-11T10:00:00Z', duration: 1800, exercises: [{ equipmentName: 'Run', doneProperties: [{ physicalProperty: 'HDistance', rawValue: '5000' }] }] }));
+  assert.equal(b.type, 'Run'); assert.equal(b.distance_km, 5); assert.equal(b.duration_min, 30);
+  const root = tmp(); const v = new Vault(path.join(root, 'F')); v.init(); const inbox = path.join(root, 'in'); fs.mkdirSync(inbox);
+  fs.writeFileSync(path.join(inbox, 'mywellness.json'), JSON.stringify(list));
+  assert.equal(processInbox(inbox, v).workouts, 1); assert.equal(v.readAll().workouts[0].duration_min, 40);
+});

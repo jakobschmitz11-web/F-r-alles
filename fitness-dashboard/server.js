@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getConfig, ROOT } from './lib/config.js';
@@ -8,6 +9,11 @@ import { processInbox } from './lib/importers.js';
 import { GoogleHealth } from './connectors/googlehealth.js';
 import { Technogym } from './connectors/technogym.js';
 
+function openBrowser(url) {
+  const [cmd, args] = process.platform === 'darwin' ? ['open', [url]] : process.platform === 'win32' ? ['cmd', ['/c', 'start', '', url]] : ['xdg-open', [url]];
+  try { spawn(cmd, args, { stdio: 'ignore', detached: true }).on('error', () => {}).unref(); } catch { /* Browser manuell öffnen */ }
+}
+
 export function createApp(cfg = getConfig()) {
   const vault = new Vault(cfg.fitnessDir);
   vault.init();
@@ -15,7 +21,7 @@ export function createApp(cfg = getConfig()) {
   const google = new GoogleHealth(cfg);
   const technogym = new Technogym(cfg);
   const clients = new Set();
-  const state = { lastInbox: null, syncing: false, startedAt: new Date().toISOString() };
+  const state = { lastInbox: null, syncing: false, startedAt: new Date().toISOString(), lastSyncAt: 0 };
 
   const snapshot = () => {
     const { days, workouts } = vault.readAll();
@@ -48,9 +54,11 @@ export function createApp(cfg = getConfig()) {
     return r;
   }
 
-  async function syncAll() {
+  // force=false: kurz hintereinander geöffnete Tabs lösen keinen zweiten Abruf aus (Google-Rate-Limits)
+  async function syncAll(force = true) {
     if (state.syncing) return { skipped: true };
-    state.syncing = true; broadcast('status');
+    if (!force && Date.now() - state.lastSyncAt < 60_000) return { skipped: true, reason: 'recent' };
+    state.syncing = true; state.lastSyncAt = Date.now(); broadcast('status');
     try {
       const inbox = scanInbox();
       const g = await google.sync(vault, 7).catch((e) => { google.status.lastError = e.message; return null; });
@@ -60,8 +68,10 @@ export function createApp(cfg = getConfig()) {
   }
 
   if (cfg.demo && vault.readAll().days.length === 0 && !google.status.connected && !technogym.configured) writeDemo(vault);
-  const interval = setInterval(syncAll, cfg.syncMinutes * 60_000); interval.unref();
-  setTimeout(syncAll, 1500).unref();
+  // Kein Dauer-Betrieb: Standardmäßig wird nur beim Öffnen synchronisiert (siehe /api/open + Frontend).
+  const interval = cfg.syncMinutes > 0 ? setInterval(() => (clients.size ? syncAll() : null), cfg.syncMinutes * 60_000) : null;
+  interval?.unref();
+  scanInbox();
 
   const redirectUri = () => `http://localhost:${cfg.port}/auth/google/callback`;
   const json = (res, code, obj) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(obj)); };
@@ -90,7 +100,9 @@ export function createApp(cfg = getConfig()) {
         req.on('close', () => { clearInterval(ka); clients.delete(res); });
         return;
       }
-      if (req.method === 'POST' && url.pathname === '/api/sync') return json(res, 200, await syncAll());
+      if (req.method === 'POST' && url.pathname === '/api/sync') return json(res, 200, await syncAll(true));
+      // Das Frontend meldet "Dashboard wurde geöffnet/angezeigt" -> frische Daten holen (gedrosselt)
+      if (req.method === 'POST' && url.pathname === '/api/open') { syncAll(false); return json(res, 200, { ok: true }); }
       if (req.method === 'POST' && url.pathname === '/api/workout') {
         const w = await body(req);
         const mins = Number(w.duration_min);
@@ -128,9 +140,20 @@ export function createApp(cfg = getConfig()) {
     } catch (e) { json(res, 500, { error: e.message }); }
   });
 
+  // Optional: Server beendet sich selbst, wenn kein Tab mehr offen ist (Dashboard läuft nur, solange man es benutzt)
+  let idleTimer;
+  const armIdle = () => {
+    clearTimeout(idleTimer);
+    if (cfg.idleExitMinutes > 0 && clients.size === 0) {
+      idleTimer = setTimeout(() => { console.log('Kein Tab offen – beende.'); process.exit(0); }, cfg.idleExitMinutes * 60_000);
+      idleTimer.unref();
+    }
+  };
+  server.on('request', (req) => { if (req.url === '/api/events') { req.on('close', () => setTimeout(armIdle, 100)); clearTimeout(idleTimer); } });
+
   return {
     server, vault, google, technogym, snapshot, syncAll, scanInbox,
-    close() { clearInterval(interval); watchers.forEach((w) => w.close()); for (const c of clients) c.end(); server.close(); },
+    close() { if (interval) clearInterval(interval); clearTimeout(idleTimer); watchers.forEach((w) => w.close()); for (const c of clients) c.end(); server.close(); },
   };
 }
 
@@ -138,6 +161,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const cfg = getConfig();
   const app = createApp(cfg);
   app.server.listen(cfg.port, '127.0.0.1', () => {
+    if (process.argv.includes('--open')) openBrowser(`http://localhost:${cfg.port}`);
     console.log(`\n  Fitness-Dashboard läuft:  http://localhost:${cfg.port}\n  Obsidian-Vault:           ${cfg.vault}\n  Technogym-Inbox:          ${cfg.inbox}\n`);
   });
 }

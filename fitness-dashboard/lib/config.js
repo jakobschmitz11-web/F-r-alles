@@ -21,7 +21,8 @@ export function getConfig(env = process.env) {
   const vault = abs(env.VAULT_PATH || './vault');
   return {
     port: Number(env.PORT || 8787),
-    syncMinutes: Number(env.SYNC_MINUTES || 15),
+    syncMinutes: Number(env.SYNC_MINUTES ?? 0), // 0 = nur beim Öffnen des Dashboards synchronisieren
+    idleExitMinutes: Number(env.IDLE_EXIT_MINUTES ?? 0), // >0: Server beendet sich, wenn so lange kein Browser-Tab offen ist
     demo: (env.DEMO ?? '1') !== '0',
     vault,
     fitnessDir: path.join(vault, 'Fitness'),

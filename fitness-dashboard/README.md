@@ -5,8 +5,10 @@ Lokales Dashboard im Browser. Ohne Abhängigkeiten (nur Node ≥ 20), Daten **au
 ```bash
 cd fitness-dashboard
 cp .env.example .env      # VAULT_PATH auf deinen Obsidian-Vault setzen
-npm start                 # → http://localhost:8787
+./start.sh                # Mac/Linux: startet und öffnet den Browser (Windows: start.bat)
 ```
+
+**Aktualisierung nur beim Öffnen:** Es läuft nichts im Hintergrund. Sobald du das Dashboard öffnest (oder zum Tab zurückkehrst) werden Fitbit, Technogym-Inbox und – falls konfiguriert – die Technogym-API abgerufen (max. 1× pro Minute). Wer das Dashboard nur bei Bedarf laufen lassen will: `IDLE_EXIT_MINUTES=5` in `.env` beendet den Server automatisch, wenn kein Tab mehr offen ist; `./start.sh` startet ihn wieder.
 
 Beim ersten Start sieht man sofort 60 Tage **Demo-Daten** (Button „Demo-Daten löschen" im Dashboard entfernt sie wieder).
 
@@ -22,7 +24,7 @@ Technogym  ──► Export-Inbox/manuell ┼──► Obsidian-Vault/Fitness/*.
 * `Fitness/Daily/YYYY-MM-DD.md` – Tageswerte (Schritte, Ruhepuls, HRV, Schlafphasen, Gewicht …) als Frontmatter. Eigene Notizen unter dem Auto-Block bleiben erhalten.
 * `Fitness/Workouts/*.md` – ein Workout pro Notiz (Quelle `fitbit` / `technogym`).
 * `Fitness/Dashboard.md` – Dataview-Übersicht in Obsidian (Plugin *Dataview* installieren).
-* Auto-Sync alle `SYNC_MINUTES` (15) + Button „Jetzt synchronisieren". Das Dashboard liest nur aus dem Vault zurück → ein einziger Speicherort.
+* Sync beim Öffnen des Dashboards (optional zusätzlich alle `SYNC_MINUTES`, solange ein Tab offen ist) + Button „Jetzt synchronisieren". Das Dashboard liest nur aus dem Vault zurück → ein einziger Speicherort.
 * OAuth-Tokens liegen in `data/tokens.json` (nicht im Vault, `chmod 600`, git-ignoriert). Server hört nur auf `127.0.0.1`.
 
 ## Fitbit Air einrichten (Google Health API)
@@ -39,7 +41,7 @@ Der Connector wurde **anhand der offiziellen Doku** gebaut (Endpunkte, Filter-Sy
 ## Technogym
 
 * **Offizielle Enterprise-API** (`connectors/technogym.js`, laut openplatformdocs.mywellness.com): trage `TECHNOGYM_API_KEY`, `TECHNOGYM_AUTH_DOMAIN` und `TECHNOGYM_USER_ID` in `.env` ein → Workouts (Dauer, kcal, Distanz, Geräte, MOVEs) werden automatisch abgeholt. **Diese Zugangsdaten vergibt Technogym nur an Partner** (Studios/Firmen). Hast du keine, nimm einen der beiden Wege unten.
-* **Inbox:** Exporte (`.tcx`, `.json`, `.csv`, auch deutsche Spaltennamen) in `Fitness/Inbox/` legen → automatisch importiert und nach `Verarbeitet/` verschoben.
+* **Inbox (dein Weg):** mywellness-Exporte (`.tcx`, `.json`, `.csv`; das Technogym-JSON mit `startedOn`/`duration` in Sekunden und mit `exercises` wird erkannt, auch deutsche Spaltennamen) in `Fitness/Inbox/` legen → automatisch importiert und nach `Verarbeitet/` verschoben.
 * **Manuell:** Formular im Dashboard („Workout manuell eintragen").
 * Läuft dein Training über Fitbit/Health-Sync mit, erscheint es zusätzlich als Quelle `fitbit`.
 

@@ -95,3 +95,16 @@ test('Server: API, Host-Schutz, manuelles Workout, Live-Event', async () => {
   assert.equal(await new Promise((res) => http.get({ host: '127.0.0.1', port: app.server.address().port, path: '/..%2fserver.js' }, (r) => { r.resume(); res(r.statusCode); })), 404);
   app.close();
 });
+
+test('Nur beim Öffnen: kein Hintergrund-Sync, /api/open synchronisiert gedrosselt', async () => {
+  const root = tmp();
+  const cfg = { port: 0, syncMinutes: 0, idleExitMinutes: 0, demo: false, vault: root, fitnessDir: path.join(root, 'Fitness'), inbox: path.join(root, 'Fitness', 'Inbox'), dataDir: path.join(root, 'data'), google: { clientId: '', clientSecret: '' }, technogym: { apiKey: '', authDomain: '', userId: '', baseUrl: '' } };
+  const app = createApp(cfg);
+  await new Promise((r) => app.server.listen(0, '127.0.0.1', r));
+  const base = `http://127.0.0.1:${app.server.address().port}`;
+  assert.equal(app.snapshot().status.syncing, false);
+  assert.equal((await app.syncAll(false)).skipped, undefined, 'erster Abruf läuft');
+  assert.equal((await app.syncAll(false)).reason, 'recent', 'zweiter innerhalb 60 s wird gedrosselt');
+  assert.equal((await fetch(`${base}/api/open`, { method: 'POST' })).status, 200);
+  app.close();
+});

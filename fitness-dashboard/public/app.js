@@ -173,7 +173,7 @@ function renderConn() {
   </div>
   <div class="cbox"><h3><span class="dot ok"></span>Obsidian (einziger Speicher)</h3>
     <p>Vault: <code>${esc(s.vault)}</code><br>${data.days.length} Tagesnotizen · ${data.workouts.length} Workout-Notizen in <code>Fitness/</code><br>Änderungen in Obsidian erscheinen hier sofort.</p>
-    <p>Auto-Sync alle ${s.syncMinutes} Min.</p>
+    <p>Synchronisiert beim Öffnen des Dashboards${s.syncMinutes ? ` und alle ${s.syncMinutes} Min. solange ein Tab offen ist` : ''}.</p>
     ${s.hasDemo ? '<div class="row"><button class="btn danger" data-act="democlear">Demo-Daten löschen</button></div>' : '<div class="row"><button class="btn" data-act="democreate">Demo-Daten erzeugen</button></div>'}
   </div>`;
   const wf = $('#wf'); if (wf) wf.addEventListener('submit', async (e) => { e.preventDefault(); const r = await post('/api/workout', Object.fromEntries(new FormData(wf))); if (r.error) alert(r.error); else wf.reset(); });
@@ -212,4 +212,8 @@ $('#syncBtn').addEventListener('click', async () => { $('#syncBtn').disabled = t
 $('#range').addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; range = +b.dataset.d; document.querySelectorAll('#range button').forEach((x) => x.classList.toggle('on', x === b)); if (data) { renderTiles(); renderCharts(); } });
 let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => data && renderCharts(), 150); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => data && render());
-load(); connect(); setInterval(load, 60_000); // Fallback-Poll, falls SSE blockiert wird
+// Aktualisierung nur, wenn man das Dashboard benutzt: beim Öffnen und wenn der Tab wieder sichtbar wird (Server drosselt auf 1x/Min)
+const onOpen = () => fetch('/api/open', { method: 'POST' }).catch(() => {});
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { onOpen(); load(); } });
+load(); connect(); onOpen();
+setInterval(() => { if (!document.hidden) load(); }, 60_000); // Fallback-Poll nur bei sichtbarem Tab, falls SSE blockiert wird
